@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import pytz
@@ -45,6 +45,20 @@ def parse_github_timestamp_to_cst(timestamp_str: str) -> datetime:
     GitHub returns timestamps like: 2024-01-15T10:30:00Z
     """
     return parse_github_iso_to_utc(timestamp_str).astimezone(CHICAGO_TZ)
+
+
+def get_lookback_cutoff(lookback_days: int) -> datetime:
+    """Return the lookback cutoff quantized to the start of its UTC day.
+
+    Validators that resolve this within the same UTC day produce an identical
+    cutoff, so a PR whose timestamp falls within seconds of the boundary is
+    uniformly included or excluded across validators rather than diverging on
+    each validator's wall-clock read. Callers should use this for any cutoff
+    that participates in scoring; ad-hoc ``datetime.now() - timedelta(...)``
+    re-introduces the boundary divergence.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    return cutoff.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def calculate_time_decay(merged_at: datetime) -> float:
